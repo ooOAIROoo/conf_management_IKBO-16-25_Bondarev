@@ -1,0 +1,34 @@
+digraph express_deps {
+    rankdir=LR;
+    node [shape=box, style="rounded,filled", fillcolor="#dce6f1", fontname="Helvetica"];
+    "express" [label="express\n5.2.1", fillcolor="#a9d6a9"];
+
+    "express" -> "accepts"             [label="^2.0.0"];
+    "express" -> "body-parser"         [label="^2.2.1"];
+    "express" -> "content-disposition" [label="^1.0.0"];
+    "express" -> "content-type"        [label="^1.0.5"];
+    "express" -> "cookie"              [label="^0.7.1"];
+    "express" -> "cookie-signature"    [label="^1.2.1"];
+    "express" -> "debug"               [label="^4.4.0"];
+    "express" -> "depd"                [label="^2.0.0"];
+    "express" -> "encodeurl"           [label="^2.0.0"];
+    "express" -> "escape-html"         [label="^1.0.3"];
+    "express" -> "etag"                [label="^1.8.1"];
+    "express" -> "finalhandler"        [label="^2.1.0"];
+    "express" -> "fresh"               [label="^2.0.0"];
+    "express" -> "http-errors"         [label="^2.0.0"];
+    "express" -> "merge-descriptors"   [label="^2.0.0"];
+    "express" -> "mime-types"          [label="^3.0.0"];
+    "express" -> "on-finished"         [label="^2.4.1"];
+    "express" -> "once"                [label="^1.4.0"];
+    "express" -> "parseurl"            [label="^1.3.3"];
+    "express" -> "proxy-addr"          [label="^2.0.7"];
+    "express" -> "qs"                  [label="^6.14.0"];
+    "express" -> "range-parser"        [label="^1.2.1"];
+    "express" -> "router"              [label="^2.2.0"];
+    "express" -> "send"                [label="^1.1.0"];
+    "express" -> "serve-static"        [label="^2.2.0"];
+    "express" -> "statuses"            [label="^2.0.1"];
+    "express" -> "type-is"             [label="^2.0.1"];
+    "express" -> "vary"                [label="^1.1.2"];
+}
