@@ -2,8 +2,6 @@
 ## Немного теории
 Менеджер пакетов — тул, который качает и ставит пакеты и разруливает их зависимости и версии (pip, npm, apt...). Сам пакет — это код + манифест с метаданными: имя, версия, зависимости, лицензия. У Python это файл `METADATA` внутри `*.dist-info`, у JS — `package.json`.
 
-Semver: `MAJOR.MINOR.PATCH` (мажор ломают API, минор добавляют фичи, патч — фиксы). Range-ы: `^1.2.3` = `>=1.2.3 <2.0.0`, `~1.2.3` = `>=1.2.3 <1.3.0`, ну и `>=`, `<` напрямую. У мажора 0 карета строгая: `^0.2.3` = `>=0.2.3 <0.3.0`.
-
 Программы со встроенным пакетным менеджером: Node.js (в комплекте npm), Dart (pub), go (go mod прямо в команде go), dotnet (NuGet), Emacs (package.el), VS Code (маркет расширений).
 
 ---
@@ -41,9 +39,8 @@ Requires-Dist: pillow>=9
 Requires-Dist: pyparsing>=3
 Requires-Dist: python-dateutil>=2.7
 ```
-Разбор: `Metadata-Version` — версия формата манифеста; `Name`/`Version`/`Summary` — кто это и что такое; `Requires-Python` — ограничение на интерпретатор (аналог engines в npm); `Requires-Dist` — зависимости с range-ами, именно их читает решатель при установке; ещё в файле есть `Classifier` (теги пакета), `Project-URL` (ссылки на репу и доки) и гигантская `License`. В самой папке dist-info также лежат `WHEEL` (как собрано: tag cp311-manylinux), `RECORD` (список файлов пакета с хэшами) и `INSTALLER` (кем поставлено).
 
-Без менеджера пакетов, прямо из репозитория: пакет — это просто файлы в гите. `git clone https://github.com/matplotlib/matplotlib` (или скачать .tar.gz архив с GitHub/PyPI прямой ссылкой). Готовый wheel — это zip: качаем `.whl` и распаковываем, папку в `sys.path` — работает. С sdist собираем руками: `python setup.py install` или `python -m build`. Ну и `pip install git+https://github.com/matplotlib/matplotlib` — формально pip, но источник — репозиторий.
+Без менеджера пакетов, прямо из репозитория: пакет — это просто файлы в гите. `git clone https://github.com/matplotlib/matplotlib` (или скачать .tar.gz архив с GitHub/PyPI прямой ссылкой).
 
 ---
 
@@ -65,9 +62,8 @@ dependencies = {
   ... всего 28 штук
 }
 ```
-Разбор: `name`/`version` — идентификация; `dependencies` — зависимости с semver-range-ами (то, по чему решатель строит дерево установки, у express все через карету); `engines` — требование к версии node (аналог Requires-Python); `files` — что вообще кладётся в tarball; `scripts` — хуки (test, lint); `license`, `repository`, `keywords` — служебное для реестра. Точка входа — `index.js` (поле main тут неявно).
 
-Без менеджера пакетов: `git clone https://github.com/expressjs/express` либо тарболл напрямую из реестра:
+Без менеджера пакетов: `git clone https://github.com/expressjs/express` либо напрямую из реестра:
 ```
 curl -O https://registry.npmjs.org/express/-/express-5.2.1.tgz
 tar xzf express-5.2.1.tgz
@@ -103,8 +99,6 @@ dot -Tpng files/express_deps.dot -o files/express_deps.png
 ![matplotlib deps](files/matplotlib_deps.png)
 
 ![express deps](files/express_deps.png)
-
-Полное транзитивное дерево при желании смотрим `npm ls --all` / `pip show` по каждой зависимости, но граф прямых зависимостей — это и есть граф из метаданных.
 
 ---
 
@@ -148,8 +142,7 @@ dropdown 1.8.0
 icons 1.0.0
 ==========
 ```
-Логика: root держит icons <2.0.0 => icons 1.0.0; значит dropdown >=2.0.0 нельзя (он просит icons ^2.0.0), а значит нельзя и menu >=1.1.0 (они все просили dropdown ^2.0.0) => menu 1.0.0 => dropdown 1.8.0. Тот самый экспоненциальный откат из статьи про PubGrub, только решатель сделал его сам.
-
+Логика: root держит icons <2.0.0 => icons 1.0.0; значит dropdown >=2.0.0 нельзя (он просит icons ^2.0.0), а значит нельзя и menu >=1.1.0 (они все просили dropdown ^2.0.0) => menu 1.0.0 => dropdown 1.8.0.
 ---
 
 ## Задание 6
