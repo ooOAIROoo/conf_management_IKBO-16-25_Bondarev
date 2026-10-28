@@ -1,0 +1,4 @@
+# vfs: broken
+type,name,parent,mode,content,encoding
+dir,/,,"0755",,
+file,image.bin,/,"0644","@@@это не base64@@@","base64"

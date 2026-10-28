@@ -15,7 +15,7 @@ set -u
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 EMU="${EMU:-$ROOT/build/bin/emu}"
-VFS="${VFS:-$ROOT/README.md}"
+VFS="${VFS:-$ROOT/vfs/demo.csv}"
 STARTUP="$ROOT/scripts/stage2.emu"
 
 TMP_DIR="$(mktemp -d)"

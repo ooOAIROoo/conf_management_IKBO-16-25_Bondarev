@@ -1,0 +1,4 @@
+# vfs: broken
+type,name,parent,mode,content,encoding
+dir,/,,"0755",,
+file,data.bin,/,"0644","aGVsbG8=","hex"

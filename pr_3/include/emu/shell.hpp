@@ -1,19 +1,22 @@
 #pragma once
 
+#include <cstddef>
 #include <string>
 #include <vector>
 
 namespace emu {
 
+class Vfs;
+struct Node;
+
 /// Оболочка: цикл «приглашение — ввод — разбор — выполнение».
 ///
-/// На этапе 2 добавлены стартовые скрипты: строки читаются из файла,
-/// комментарии ('#') игнорируются, ввод и вывод команд отображаются так же,
-/// как при интерактивной работе. Ошибки скрипта сопровождаются именем файла
-/// и номером строки.
+/// Этап 3: команды работают с виртуальной файловой системой в памяти,
+/// приглашение содержит имя VFS и текущий каталог.
+/// Этап 4: полноценные ls и cd, а также команды who, tree и uname.
 class Shell {
 public:
-    explicit Shell(std::string vfsName);
+    explicit Shell(Vfs& vfs);
 
     /// Интерактивный цикл до команды exit или конца ввода.
     /// Возвращает код завершения эмулятора.
@@ -23,7 +26,7 @@ public:
     /// не удаётся открыть. Возвращает код завершения последней команды.
     int runScriptFile(const std::string& path);
 
-    /// Текст приглашения, например "vfs:/$ ".
+    /// Текст приглашения, например "demo:/home/user$ ".
     std::string prompt() const;
 
 private:
@@ -32,11 +35,22 @@ private:
     int executeLine(const std::string& line, bool scriptMode);
 
     int handleExit(const std::vector<std::string>& args);
-    void printStub(const std::string& command,
-                   const std::vector<std::string>& args) const;
+
+    int cmdLs(const std::vector<std::string>& args);
+    int cmdCd(const std::vector<std::string>& args);
+    int cmdWho(const std::vector<std::string>& args);
+    int cmdUname(const std::vector<std::string>& args);
+    int cmdTree(const std::vector<std::string>& args);
+
+    void printTreeChildren(const Node& directory, const std::string& prefix) const;
+    static void countTree(const Node& directory, std::size_t& directories,
+                          std::size_t& files);
+
     void printHelp() const;
 
-    std::string vfsName_;
+    Vfs& vfs_;
+    std::string cwd_ = "/";
+    std::string previousCwd_ = "/";
     bool running_ = true;
     int exitCode_ = 0;
     int lastStatus_ = 0;

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(emu_vfs
-    VERSION 0.2.0
+    VERSION 0.4.0
     DESCRIPTION "Эмулятор командной строки UNIX-подобной ОС с виртуальной файловой системой"
     LANGUAGES CXX)
 
@@ -25,9 +25,14 @@ endif()
 
 add_executable(emu
     src/main.cpp
+    src/base64.cpp
+    src/commands.cpp
     src/config.cpp
+    src/csv.cpp
     src/lexer.cpp
-    src/shell.cpp)
+    src/path.cpp
+    src/shell.cpp
+    src/vfs.cpp)
 
 target_include_directories(emu PRIVATE include)
 

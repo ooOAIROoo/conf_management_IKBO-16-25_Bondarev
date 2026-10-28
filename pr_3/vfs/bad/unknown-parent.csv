@@ -1,0 +1,4 @@
+# vfs: broken
+type,name,parent,mode,content,encoding
+dir,/,,"0755",,
+file,orphan.txt,/нет-такого-каталога,"0644","родитель отсутствует","text"

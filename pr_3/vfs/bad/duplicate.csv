@@ -1,0 +1,6 @@
+# vfs: broken
+type,name,parent,mode,content,encoding
+dir,/,,"0755",,
+dir,etc,/,"0755",,
+file,passwd,etc,"0644","root:x:0:0","text"
+file,passwd,etc,"0644","дубликат имени","text"
