@@ -398,4 +398,120 @@ int Shell::cmdTree(const std::vector<std::string>& args) {
     return 0;
 }
 
+int Shell::cmdTouch(const std::vector<std::string>& args) {
+    bool optionsEnded = false;
+    std::vector<std::string> operands;
+
+    for (const std::string& arg : args) {
+        if (!optionsEnded && arg == "--") {
+            optionsEnded = true;
+            continue;
+        }
+        if (!optionsEnded && arg.size() > 1 && arg.front() == '-') {
+            std::cerr << "touch: недопустимая опция: " << arg << "\n";
+            return 2;
+        }
+        operands.push_back(arg);
+    }
+
+    if (operands.empty()) {
+        std::cerr << "touch: не указан операнд (имя файла)\n";
+        return 2;
+    }
+
+    int status = 0;
+    for (const std::string& operand : operands) {
+        const std::string absolute = path::normalize(expandTilde(operand), cwd_);
+        Node* node = vfs_.find(absolute);
+        if (node != nullptr) {
+            // Файл уже существует: в реальной ОС touch обновляет время
+            // изменения. В модели VFS время не хранится, поэтому обновление
+            // является успешной операцией-пустышкой.
+            continue;
+        }
+
+        const std::string parentPath = path::dirname(absolute);
+        const std::string name = path::basename(absolute);
+        Node* parent = vfs_.find(parentPath);
+        if (parent == nullptr) {
+            std::cerr << "touch: " << operand
+                      << ": нет такого файла или каталога\n";
+            status = 1;
+            continue;
+        }
+        if (!parent->isDirectory()) {
+            std::cerr << "touch: " << operand
+                      << ": родительский путь не является каталогом\n";
+            status = 1;
+            continue;
+        }
+
+        try {
+            vfs_.createFile(*parent, name);
+        } catch (const VfsError& error) {
+            std::cerr << "touch: " << operand << ": " << error.what() << "\n";
+            status = 1;
+        }
+    }
+    return status;
+}
+
+int Shell::cmdRmdir(const std::vector<std::string>& args) {
+    bool optionsEnded = false;
+    std::vector<std::string> operands;
+
+    for (const std::string& arg : args) {
+        if (!optionsEnded && arg == "--") {
+            optionsEnded = true;
+            continue;
+        }
+        if (!optionsEnded && arg.size() > 1 && arg.front() == '-') {
+            std::cerr << "rmdir: недопустимая опция: " << arg << "\n";
+            return 2;
+        }
+        operands.push_back(arg);
+    }
+
+    if (operands.empty()) {
+        std::cerr << "rmdir: не указан операнд (имя каталога)\n";
+        return 2;
+    }
+
+    int status = 0;
+    for (const std::string& operand : operands) {
+        const std::string absolute = path::normalize(expandTilde(operand), cwd_);
+        Node* node = vfs_.find(absolute);
+        if (node == nullptr) {
+            std::cerr << "rmdir: " << operand << ": нет такого каталога\n";
+            status = 1;
+            continue;
+        }
+        if (!node->isDirectory()) {
+            std::cerr << "rmdir: " << operand << ": не каталог\n";
+            status = 1;
+            continue;
+        }
+        if (node == &vfs_.root()) {
+            std::cerr << "rmdir: " << operand
+                      << ": нельзя удалить корневой каталог\n";
+            status = 1;
+            continue;
+        }
+        if (!node->children.empty()) {
+            std::cerr << "rmdir: " << operand << ": каталог не пуст\n";
+            status = 1;
+            continue;
+        }
+
+        try {
+            vfs_.remove(*node);
+        } catch (const VfsError& error) {
+            std::cerr << "rmdir: " << operand << ": " << error.what() << "\n";
+            status = 1;
+        }
+    }
+    return status;
+}
+
 }  // namespace emu
+

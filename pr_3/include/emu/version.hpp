@@ -2,7 +2,7 @@
 
 namespace emu {
 
-inline constexpr const char* kVersion = "0.4.0";
-inline constexpr const char* kStageDescription = "этапы 3–4 — VFS и основные команды";
+inline constexpr const char* kVersion = "0.5.0";
+inline constexpr const char* kStageDescription = "все этапы 1–5";
 
 }  // namespace emu

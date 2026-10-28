@@ -114,6 +114,12 @@ int Shell::executeLine(const std::string& line, bool scriptMode) {
     if (command == "tree") {
         return cmdTree(args);
     }
+    if (command == "touch") {
+        return cmdTouch(args);
+    }
+    if (command == "rmdir") {
+        return cmdRmdir(args);
+    }
     if (command == "help") {
         printHelp();
         return 0;
@@ -149,7 +155,7 @@ int Shell::handleExit(const std::vector<std::string>& args) {
 }
 
 void Shell::printHelp() const {
-    std::cout << "Эмулятор командной строки UNIX-подобной ОС (этапы 3–4)\n"
+    std::cout << "Эмулятор командной строки UNIX-подобной ОС (все этапы)\n"
                  "Доступные команды:\n"
                  "  ls [-l] [-a] [путь...]  — содержимое каталога\n"
                  "                            -l: подробный формат\n"
@@ -160,6 +166,8 @@ void Shell::printHelp() const {
                  "  who                     — пользователь текущего сеанса\n"
                  "  tree [путь]             — дерево каталогов\n"
                  "  uname [-snrvmoa]        — сведения о системе\n"
+                 "  touch <файл...>         — создать файл (только в памяти)\n"
+                 "  rmdir <каталог...>      — удалить пустой каталог\n"
                  "  exit [код]              — выход с кодом 0..255\n"
                  "  help                    — эта справка\n"
                  "\n"
