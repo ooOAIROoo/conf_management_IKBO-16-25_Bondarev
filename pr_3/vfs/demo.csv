@@ -15,6 +15,7 @@ dir,docs,home/user,"0755",,
 file,notes.txt,home/user/docs,"0644","Заметки: VFS живёт в памяти, на диск ничего не пишется.","text"
 file,readme.md,home/user,"0644","# Домашний каталог пользователя","text"
 dir,tmp,/,"1777",,
+dir,empty,tmp,"0755",,
 file,кириллица.txt,tmp,"0644","Файл с именем на кириллице","text"
 dir,var,/,"0755",,
 dir,log,var,"0755",,

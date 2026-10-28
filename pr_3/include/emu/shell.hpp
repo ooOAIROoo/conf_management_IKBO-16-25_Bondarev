@@ -14,6 +14,7 @@ struct Node;
 /// Этап 3: команды работают с виртуальной файловой системой в памяти,
 /// приглашение содержит имя VFS и текущий каталог.
 /// Этап 4: полноценные ls и cd, а также команды who, tree и uname.
+/// Этап 5: команды touch и rmdir изменяют VFS только в памяти.
 class Shell {
 public:
     explicit Shell(Vfs& vfs);
@@ -41,6 +42,8 @@ private:
     int cmdWho(const std::vector<std::string>& args);
     int cmdUname(const std::vector<std::string>& args);
     int cmdTree(const std::vector<std::string>& args);
+    int cmdTouch(const std::vector<std::string>& args);
+    int cmdRmdir(const std::vector<std::string>& args);
 
     void printTreeChildren(const Node& directory, const std::string& prefix) const;
     static void countTree(const Node& directory, std::size_t& directories,
