@@ -1,0 +1,4 @@
+# vfs: broken
+type,name,parent,mode,content,encoding
+dir,/,,"0755",,
+file,quotes.txt,/,"0644","незакрытая кавычка,text

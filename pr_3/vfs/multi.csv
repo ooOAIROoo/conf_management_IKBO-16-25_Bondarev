@@ -1,0 +1,12 @@
+# VFS «несколько файлов»: плоская структура из двух уровней.
+# vfs: multi
+type,name,parent,mode,content,encoding
+dir,/,,"0755",,
+dir,etc,/,0755,,
+file,hostname,etc,0644,emu-vfs,text
+file,passwd,etc,0644,"root:x:0:0:root:/root:/bin/sh","text"
+dir,tmp,/,1777,,
+file,alpha.txt,/,0644,"Первый файл в корне","text"
+file,beta.txt,/,0644,"Второй файл в корне","text"
+file,README,/,0644,"Файл без расширения","text"
+file,.hidden,/,0600,"Файл с именем, начинающимся с точки","text"

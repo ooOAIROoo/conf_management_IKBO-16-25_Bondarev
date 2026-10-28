@@ -1,0 +1,5 @@
+# Минимальная VFS: корневой каталог и один файл.
+# vfs: minimal
+type,name,parent,mode,content,encoding
+dir,/,,"0755",,
+file,hello.txt,/,"0644","Hello, VFS!","text"

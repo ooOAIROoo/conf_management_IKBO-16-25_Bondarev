@@ -5,6 +5,7 @@
 
 #include "emu/config.hpp"
 #include "emu/shell.hpp"
+#include "emu/vfs.hpp"
 #include "emu/version.hpp"
 
 #ifdef _WIN32
@@ -65,26 +66,6 @@ std::vector<std::string> collectArguments(int argc, char** argv) {
     return args;
 }
 
-/// Имя VFS, отображаемое в приглашении. На этапе 2 VFS ещё не загружается.
-std::string vfsNamePlaceholder(const emu::Config& config) {
-    if (config.vfsPath) {
-        // Показываем имя CSV-файла без расширения — удобный идентификатор.
-        std::string name = *config.vfsPath;
-        const std::size_t slash = name.find_last_of("/\\");
-        if (slash != std::string::npos) {
-            name.erase(0, slash + 1);
-        }
-        const std::size_t dot = name.find_last_of('.');
-        if (dot != std::string::npos && dot != 0) {
-            name.erase(dot);
-        }
-        if (!name.empty()) {
-            return name;
-        }
-    }
-    return "vfs";
-}
-
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -111,9 +92,23 @@ int main(int argc, char** argv) {
 
     emu::printConfig(config, std::cerr);
 
-    emu::Shell shell(vfsNamePlaceholder(config));
-
     try {
+        emu::Vfs vfs;
+        if (config.vfsPath) {
+            vfs = emu::Vfs::loadFromCsv(*config.vfsPath);
+            if (config.debugOutput) {
+                const emu::VfsStats stats = vfs.stats();
+                std::cerr << "[vfs] загружено из \"" << *config.vfsPath
+                          << "\": имя \"" << vfs.name() << "\", каталогов "
+                          << stats.directories << ", файлов " << stats.files
+                          << ", объём " << stats.bytes << " Б\n";
+            }
+        } else if (config.debugOutput) {
+            std::cerr << "[vfs] параметр --vfs не задан: используется пустая "
+                         "встроенная VFS \"vfs\"\n";
+        }
+
+        emu::Shell shell(vfs);
         if (config.scriptPath) {
             const int scriptStatus = shell.runScriptFile(*config.scriptPath);
             if (!config.interactiveAfterScript) {

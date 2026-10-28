@@ -20,7 +20,7 @@ if not exist "%EMU%" (
     exit /b 1
 )
 
-set "VFS=%ROOT%\README.md"
+set "VFS=%ROOT%\vfs\demo.csv"
 set "STARTUP=%ROOT%\scripts\stage2.emu"
 set "TMP_IN=%TEMP%\emu_interactive_%RANDOM%.emu"
 > "%TMP_IN%" echo ls /

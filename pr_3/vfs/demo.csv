@@ -1,0 +1,21 @@
+# VFS «полная»: не менее трёх уровней вложенности, текстовые и двоичные
+# данные (base64), имена на кириллице, разные права доступа.
+# vfs: demo
+type,name,parent,mode,content,encoding
+dir,/,,"0755",,
+dir,bin,/,"0755",,
+file,hello,bin,"0755","echo Hello from VFS","text"
+dir,etc,/,"0755",,
+file,passwd,etc,"0644","root:x:0:0:root:/root:/bin/sh","text"
+file,motd,etc,"0644","Добро пожаловать в эмулятор VFS!","text"
+file,logo.bin,etc,"0644","iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==","base64"
+dir,home,/,"0755",,
+dir,user,home,"0755",,
+dir,docs,home/user,"0755",,
+file,notes.txt,home/user/docs,"0644","Заметки: VFS живёт в памяти, на диск ничего не пишется.","text"
+file,readme.md,home/user,"0644","# Домашний каталог пользователя","text"
+dir,tmp,/,"1777",,
+file,кириллица.txt,tmp,"0644","Файл с именем на кириллице","text"
+dir,var,/,"0755",,
+dir,log,var,"0755",,
+file,syslog,var/log,"0640","Oct 20 12:00:00 emu: VFS загружена","text"

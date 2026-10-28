@@ -5,14 +5,15 @@
 #include <stdexcept>
 
 #include "emu/lexer.hpp"
+#include "emu/vfs.hpp"
 
 namespace emu {
 
-Shell::Shell(std::string vfsName) : vfsName_(std::move(vfsName)) {}
+Shell::Shell(Vfs& vfs) : vfs_(vfs) {}
 
 std::string Shell::prompt() const {
-    // Приглашение содержит имя VFS (требование этапа 1).
-    return vfsName_ + ":/$ ";
+    // Приглашение содержит имя VFS и текущий каталог.
+    return vfs_.name() + ":" + cwd_ + "$ ";
 }
 
 int Shell::runInteractive() {
@@ -98,9 +99,20 @@ int Shell::executeLine(const std::string& line, bool scriptMode) {
     if (command == "exit" || command == "quit") {
         return handleExit(args);
     }
-    if (command == "ls" || command == "cd") {
-        printStub(command, args);
-        return 0;
+    if (command == "ls") {
+        return cmdLs(args);
+    }
+    if (command == "cd") {
+        return cmdCd(args);
+    }
+    if (command == "who") {
+        return cmdWho(args);
+    }
+    if (command == "uname") {
+        return cmdUname(args);
+    }
+    if (command == "tree") {
+        return cmdTree(args);
     }
     if (command == "help") {
         printHelp();
@@ -136,21 +148,20 @@ int Shell::handleExit(const std::vector<std::string>& args) {
     return 0;
 }
 
-void Shell::printStub(const std::string& command,
-                      const std::vector<std::string>& args) const {
-    std::cout << command << ": заглушка, аргументов: " << args.size() << "\n";
-    for (std::size_t i = 0; i < args.size(); ++i) {
-        std::cout << "  аргумент " << (i + 1) << ": \"" << args[i] << "\"\n";
-    }
-}
-
 void Shell::printHelp() const {
-    std::cout << "Эмулятор командной строки UNIX-подобной ОС (этап 2)\n"
+    std::cout << "Эмулятор командной строки UNIX-подобной ОС (этапы 3–4)\n"
                  "Доступные команды:\n"
-                 "  ls [аргументы...]  — заглушка, печатает имя и аргументы\n"
-                 "  cd [аргументы...]  — заглушка, печатает имя и аргументы\n"
-                 "  exit [код]         — выход с кодом 0..255\n"
-                 "  help               — эта справка\n"
+                 "  ls [-l] [-a] [путь...]  — содержимое каталога\n"
+                 "                            -l: подробный формат\n"
+                 "                            -a: показывать . и ..\n"
+                 "  cd [путь]               — переход в каталог\n"
+                 "                            без аргумента или ~ — в /,\n"
+                 "                            cd - — в предыдущий каталог\n"
+                 "  who                     — пользователь текущего сеанса\n"
+                 "  tree [путь]             — дерево каталогов\n"
+                 "  uname [-snrvmoa]        — сведения о системе\n"
+                 "  exit [код]              — выход с кодом 0..255\n"
+                 "  help                    — эта справка\n"
                  "\n"
                  "Строки поддерживают одинарные и двойные кавычки.\n"
                  "В стартовых скриптах '#' в начале слова начинает комментарий.\n";
