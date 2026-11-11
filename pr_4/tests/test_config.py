@@ -35,7 +35,9 @@ class TestDefaults(unittest.TestCase):
         self.assertEqual(result.config.package, "com.google.guava:guava")
 
     def test_equals_form(self):
-        result = parse_command_line(["--package=guava", "--package-version=32.1.2"])
+        result = parse_command_line(
+            ["--package=guava", "--package-version=32.1.2"]
+        )
         self.assertTrue(result.ok(), result.error)
         self.assertEqual(result.config.package_version, "32.1.2")
 
@@ -65,7 +67,7 @@ class TestAllParameters(unittest.TestCase):
                 "--repo", tmp_path,
                 "--test-repo",
                 "--package-version", "1.0.0",
-                "--output", "out/graph.png" if False else "graph.png",
+                "--output", "graph.png",
                 "--ascii-tree",
                 "--filter", "guava",
             ]
@@ -103,7 +105,9 @@ class TestErrors(unittest.TestCase):
         self.assert_error([], "--package")
 
     def test_unknown_parameter(self):
-        self.assert_error(["--package", "guava", "--bogus"], "неизвестный параметр")
+        self.assert_error(
+            ["--package", "guava", "--bogus"], "неизвестный параметр"
+        )
 
     def test_missing_value(self):
         self.assert_error(["--package"], "требует значения")
@@ -115,10 +119,15 @@ class TestErrors(unittest.TestCase):
         self.assert_error(["guava"], "позиционный аргумент")
 
     def test_flag_with_value(self):
-        self.assert_error(["--package", "guava", "--ascii-tree=true"], "не принимает значения")
+        self.assert_error(
+            ["--package", "guava", "--ascii-tree=true"],
+            "не принимает значения",
+        )
 
     def test_bad_package_name(self):
-        self.assert_error(["--package", "bad name!"], "недопустимое имя пакета")
+        self.assert_error(
+            ["--package", "bad name!"], "недопустимое имя пакета"
+        )
 
     def test_bad_package_version(self):
         self.assert_error(
@@ -146,13 +155,19 @@ class TestErrors(unittest.TestCase):
 
     def test_repo_url_in_test_mode(self):
         self.assert_error(
-            ["--package", "guava", "--repo", "https://example.com/repo", "--test-repo"],
+            [
+                "--package", "guava",
+                "--repo", "https://example.com/repo", "--test-repo",
+            ],
             "путём к файлу",
         )
 
     def test_test_repo_file_not_found(self):
         self.assert_error(
-            ["--package", "guava", "--repo", "/tmp/нет-такого-файла.txt", "--test-repo"],
+            [
+                "--package", "guava",
+                "--repo", "/tmp/нет-такого-файла.txt", "--test-repo",
+            ],
             "не найден",
         )
 
@@ -165,7 +180,10 @@ class TestErrors(unittest.TestCase):
 
     def test_output_parent_not_exists(self):
         self.assert_error(
-            ["--package", "guava", "--output", "нет-такого-каталога/graph.png"],
+            [
+                "--package", "guava",
+                "--output", "нет-такого-каталога/graph.png",
+            ],
             "родительский каталог",
         )
 

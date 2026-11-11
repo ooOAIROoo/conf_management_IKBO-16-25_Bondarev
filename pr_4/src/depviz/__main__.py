@@ -1,4 +1,4 @@
-"""Запуск как ``python -m depviz`` (аналог ``main.cpp`` в pr_3)."""
+"""Запуск как python -m depviz (аналог main.cpp в pr_3)."""
 
 from .app import main
 
