@@ -1,174 +1,334 @@
-#!/usr/bin/env python3
-"""
-Задача 7: задача о зависимостях пакетов в общей форме.
+"""Задача 7: зависимости пакетов.
 
-Действуем как настоящий пакетный менеджер: описание пакетов и их зависимостей
-лежит в структуре данных (словарь METADATA — в реальности такой словарь
-менеджер получает из реестра: PyPI JSON, npm registry и т.п.), а система
-ограничений MiniZinc строится по этому словарю АВТОМАТИЧЕСКИ.
+Работаем как настоящий пакетный
+менеджер: описание пакетов и их
+зависимостей лежит в структуре данных
+(словарь METADATA — в реальности его
+получают из реестра: PyPI JSON,
+npm registry и т. п.), а система
+ограничений MiniZinc строится по
+этому словарю автоматически.
 
 Формат словаря:
-    METADATA[name][version] = {dep_name: (lo, hi)}   # lo <= v < hi, hi=None - без верха
-    ROOT = {dep_name: (lo, hi)}                      # зависимости корневого пакета
-В модели 0 означает "пакет не установлен", i >= 1 - индекс версии в списке версий.
 
-Запуск:  python3 files/task_7.py [t6|t5]
-Скрипт генерирует files/task_7.mzn и, если в системе есть MiniZinc,
-запускает его; иначе решает перебором (для проверки/демо).
+    METADATA[name][version] = {dep: (lo, hi)}
+    ROOT = {dep: (lo, hi)}
+
+Диапазон означает lo <= v < hi;
+hi=None — без верхней границы.
+В модели 0 означает «пакет не
+установлен», i >= 1 — индекс версии
+в списке версий.
+
+Запуск: python3 files/task_7.py [t6|t5]
+
+Скрипт генерирует files/task_7.mzn и,
+если в системе есть MiniZinc,
+запускает его; иначе решает перебором.
 """
+
 import shutil
 import subprocess
 import sys
 from itertools import product
 from pathlib import Path
 
-V = lambda s: tuple(int(x) for x in s.split("."))
+MZN_SOLVER = "Gecode"
+MZN_SUFFIX = ".mzn"
+NOT_INSTALLED = "not installed"
+SEP = "----------"
 
-# ---- метаданные из условия задачи 6 ----
-META_T6 = {
-    "foo":    {"1.0.0": {},
-               "1.1.0": {"left": ("1.0.0", "2.0.0"), "right": ("1.0.0", "2.0.0")}},
-    "left":   {"1.0.0": {"shared": ("1.0.0", None)}},
-    "right":  {"1.0.0": {"shared": (None, "2.0.0")}},
-    "shared": {"1.0.0": {"target": ("1.0.0", "2.0.0")}, "2.0.0": {}},
-    "target": {"1.0.0": {}, "2.0.0": {}},
-}
-ROOT_T6 = {"foo": ("1.0.0", "2.0.0"), "target": ("2.0.0", "3.0.0")}
 
-# ---- метаданные из задачи 5 (рисунок PubGrub), та же генерация ----
-META_T5 = {
-    "menu":     {"1.0.0": {"dropdown": ("1.0.0", "2.0.0")},
-                 "1.1.0": {"dropdown": ("2.0.0", None)},
-                 "1.2.0": {"dropdown": ("2.0.0", None)},
-                 "1.3.0": {"dropdown": ("2.0.0", None)},
-                 "1.4.0": {"dropdown": ("2.0.0", None)},
-                 "1.5.0": {"dropdown": ("2.0.0", None)}},
-    "dropdown": {"1.8.0": {"icons": ("1.0.0", "2.0.0")},
-                 "2.0.0": {"icons": ("2.0.0", None)},
-                 "2.1.0": {"icons": ("2.0.0", None)},
-                 "2.2.0": {"icons": ("2.0.0", None)},
-                 "2.3.0": {"icons": ("2.0.0", None)}},
-    "icons":    {"1.0.0": {}, "2.0.0": {}},
-}
-ROOT_T5 = {"menu": ("1.0.0", "2.0.0"), "icons": ("1.0.0", "2.0.0")}
+def parse_version(text):
+    """Превращает '1.2.3' в кортеж чисел."""
+    return tuple(int(part) for part in text.split("."))
 
 
 def versions(meta, name):
-    return sorted(meta[name], key=V)
+    """Версии пакета по возрастанию."""
+    return sorted(meta[name], key=parse_version)
+
+
+META_T6 = {
+    "foo": {
+        "1.0.0": {},
+        "1.1.0": {
+            "left": ("1.0.0", "2.0.0"),
+            "right": ("1.0.0", "2.0.0"),
+        },
+    },
+    "left": {"1.0.0": {"shared": ("1.0.0", None)}},
+    "right": {"1.0.0": {"shared": (None, "2.0.0")}},
+    "shared": {
+        "1.0.0": {"target": ("1.0.0", "2.0.0")},
+        "2.0.0": {},
+    },
+    "target": {"1.0.0": {}, "2.0.0": {}},
+}
+ROOT_T6 = {
+    "foo": ("1.0.0", "2.0.0"),
+    "target": ("2.0.0", "3.0.0"),
+}
+
+META_T5 = {
+    "menu": {
+        "1.0.0": {"dropdown": ("1.0.0", "2.0.0")},
+        "1.1.0": {"dropdown": ("2.0.0", None)},
+        "1.2.0": {"dropdown": ("2.0.0", None)},
+        "1.3.0": {"dropdown": ("2.0.0", None)},
+        "1.4.0": {"dropdown": ("2.0.0", None)},
+        "1.5.0": {"dropdown": ("2.0.0", None)},
+    },
+    "dropdown": {
+        "1.8.0": {"icons": ("1.0.0", "2.0.0")},
+        "2.0.0": {"icons": ("2.0.0", None)},
+        "2.1.0": {"icons": ("2.0.0", None)},
+        "2.2.0": {"icons": ("2.0.0", None)},
+        "2.3.0": {"icons": ("2.0.0", None)},
+    },
+    "icons": {"1.0.0": {}, "2.0.0": {}},
+}
+ROOT_T5 = {
+    "menu": ("1.0.0", "2.0.0"),
+    "icons": ("1.0.0", "2.0.0"),
+}
 
 
 def idx_range(meta, name, rng):
-    """индексы версий (1-based), попадающих в диапазон [lo, hi)"""
+    """Индексы версий (1-based) в диапазоне [lo, hi)."""
     lo, hi = rng
-    lo = V(lo) if lo else None
-    hi = V(hi) if hi else None
-    return [i for i, v in enumerate(versions(meta, name), 1)
-            if (lo is None or V(v) >= lo) and (hi is None or V(v) < hi)]
+    lo = parse_version(lo) if lo else None
+    hi = parse_version(hi) if hi else None
+    result = []
+    for i, ver in enumerate(versions(meta, name), 1):
+        ok_lo = lo is None or parse_version(ver) >= lo
+        ok_hi = hi is None or parse_version(ver) < hi
+        if ok_lo and ok_hi:
+            result.append(i)
+    return result
+
+
+def _domain_lines(meta, names):
+    """Строки объявления переменных домена."""
+    lines = [
+        "% сгенерировано task_7.py по "
+        "метаданным; 0 = пакет "
+        "не установлен"
+    ]
+    for name in names:
+        count = len(versions(meta, name))
+        lines.append(f"var 0..{count}: {name};")
+    lines.append("")
+    return lines
+
+
+def _root_lines(meta, root):
+    """Ограничения корневых зависимостей."""
+    lines = []
+    for dep, rng in root.items():
+        idx = idx_range(meta, dep, rng)
+        lines.append(
+            f"constraint {dep} >= {idx[0]} "
+            f"/\\ {dep} <= {idx[-1]};"
+            f"  % root: {dep} {rng}"
+        )
+    lines.append("")
+    return lines
+
+
+def _dep_lines(meta, names):
+    """Ограничения по версиям."""
+    lines = []
+    for name in names:
+        for i, ver in enumerate(versions(meta, name), 1):
+            for dep, rng in meta[name][ver].items():
+                idx = idx_range(meta, dep, rng)
+                lines.append(
+                    f"constraint ({name} = {i}) -> "
+                    f"({dep} >= {idx[0]} /\\ "
+                    f"{dep} <= {idx[-1]});"
+                    f"  % {name} {ver} -> {dep} {rng}"
+                )
+    lines.append("")
+    return lines
+
+
+def _parents_of(meta, names, target):
+    """Условия, при которых нужен target."""
+    parents = []
+    for name in names:
+        for i, ver in enumerate(versions(meta, name), 1):
+            deps = meta[name][ver]
+            if target in deps and idx_range(
+                meta, target, deps[target]
+            ):
+                parents.append(f"({name} = {i})")
+    return parents
+
+
+def _support_lines(meta, names, root):
+    """Ставим только то, что понадобилось."""
+    lines = []
+    or_sep = " \\/ "
+    for name in names:
+        if name in root:
+            continue
+        parents = _parents_of(meta, names, name)
+        if parents:
+            joined = or_sep.join(parents)
+            lines.append(
+                f"constraint ({name} > 0) -> "
+                f"({joined});"
+            )
+        else:
+            lines.append(f"constraint {name} = 0;")
+    lines.append("")
+    return lines
+
+
+def _version_array_lines(meta, names):
+    """Массивы версий для вывода."""
+    lines = []
+    for name in names:
+        quoted = ", ".join(
+            f'"{ver}"' for ver in versions(meta, name)
+        )
+        count = len(versions(meta, name))
+        lines.append(
+            f"array[1..{count}] of string: "
+            f"{name}V = [{quoted}];"
+        )
+    return lines
+
+
+def _output_lines(meta, names):
+    """Блок solve и output модели MiniZinc."""
+    lines = ["solve satisfy;", ""]
+    lines += _version_array_lines(meta, names)
+    lines.append("output [")
+    body = []
+    for name in names:
+        body.append(
+            f'  "{name} " ++ (if fix({name}) = 0 '
+            f'then "{NOT_INSTALLED}" '
+            f'else {name}V[fix({name})] endif) '
+            f'++ "\\n"'
+        )
+    lines.append(" ++\n".join(body))
+    lines.append("];")
+    return lines
 
 
 def build_mzn(meta, root):
+    """Строит текст модели MiniZinc."""
     names = list(meta)
-    L = ["% сгенерировано task_7.py по метаданным; 0 = пакет не установлен"]
-    for p in names:
-        L.append(f"var 0..{len(versions(meta, p))}: {p};")
-    L.append("")
-    # требования корневого пакета
-    for dep, rng in root.items():
-        r = idx_range(meta, dep, rng)
-        L.append(f"constraint {dep} >= {r[0]} /\\ {dep} <= {r[-1]};  % root: {dep} {rng}")
-    L.append("")
-    # зависимости каждой версии каждого пакета
-    for q in names:
-        for i, ver in enumerate(versions(meta, q), 1):
-            for dep, rng in meta[q][ver].items():
-                r = idx_range(meta, dep, rng)
-                L.append(f"constraint ({q} = {i}) -> ({dep} >= {r[0]} /\\ {dep} <= {r[-1]});"
-                         f"  % {q} {ver} -> {dep} {rng}")
-    L.append("")
-    # ставим только то, что понадобилось (поддержанность решения)
-    for p in names:
-        if p in root:
+    lines = _domain_lines(meta, names)
+    lines += _root_lines(meta, root)
+    lines += _dep_lines(meta, names)
+    lines += _support_lines(meta, names, root)
+    lines += _output_lines(meta, names)
+    return "\n".join(lines) + "\n"
+
+
+def _version_ok(meta, sel, name):
+    """Зависимости выбранной версии."""
+    if not sel[name]:
+        return True
+    ver = versions(meta, name)[sel[name] - 1]
+    for dep, rng in meta[name][ver].items():
+        if sel[dep] not in idx_range(meta, dep, rng):
+            return False
+    return True
+
+
+def _needed(meta, sel, names, name, root):
+    """Нужен ли пакет на самом деле."""
+    if name in root or sel[name] == 0:
+        return True
+    for parent in names:
+        if not sel[parent]:
             continue
-        parents = [f"({q} = {i})"
-                   for q in names
-                   for i, ver in enumerate(versions(meta, q), 1)
-                   if p in meta[q][ver] and idx_range(meta, p, meta[q][ver][p])]
-        if parents:
-            or_sep = " \\/ "
-            L.append(f"constraint ({p} > 0) -> ({or_sep.join(parents)});")
-        else:
-            L.append(f"constraint {p} = 0;")
-    L.append("")
-    # вывод
-    L.append("solve satisfy;")
-    L.append("")
-    for p in names:
-        vs = ", ".join(f'"{v}"' for v in versions(meta, p))
-        L.append(f"array[1..{len(versions(meta, p))}] of string: {p}V = [{vs}];")
-    L.append("output [")
-    body = []
-    for p in names:
-        body.append(f'  "{p} " ++ (if fix({p}) = 0 then "not installed" '
-                    f'else {p}V[fix({p})] endif) ++ "\\n"')
-    L.append(" ++\n".join(body))
-    L.append("];")
-    return "\n".join(L) + "\n"
+        ver = versions(meta, parent)[sel[parent] - 1]
+        deps = meta[parent][ver]
+        if name in deps and sel[name] in idx_range(
+            meta, name, deps[name]
+        ):
+            return True
+    return False
+
+
+def _combo_ok(meta, sel, names, root):
+    """Проверяет допустимость набора версий."""
+    for dep, rng in root.items():
+        if sel[dep] not in idx_range(meta, dep, rng):
+            return False
+    for name in names:
+        if not _version_ok(meta, sel, name):
+            return False
+    for name in names:
+        if not _needed(meta, sel, names, name, root):
+            return False
+    return True
 
 
 def brute(meta, root):
-    """перебор для самопроверки: все комбинации версий (0 = не ставим)"""
+    """Перебор всех комбинаций версий."""
     names = list(meta)
-    doms = [range(0, len(versions(meta, p)) + 1) for p in names]
-    sols = []
-    for combo in product(*doms):
+    domains = [
+        range(0, len(versions(meta, name)) + 1)
+        for name in names
+    ]
+    solutions = []
+    for combo in product(*domains):
         sel = dict(zip(names, combo))
-        ok = all(sel[d] in idx_range(meta, d, r) for d, r in root.items())
-        if ok:
-            for q in names:
-                if sel[q]:
-                    ver = versions(meta, q)[sel[q] - 1]
-                    for dep, rng in meta[q][ver].items():
-                        if sel[dep] not in idx_range(meta, dep, rng):
-                            ok = False
-                            break
-                if not ok:
-                    break
-        if ok:
-            for p in names:
-                if p in root or sel[p] == 0:
-                    continue
-                needed = any(
-                    sel[q] and p in meta[q][versions(meta, q)[sel[q] - 1]]
-                    and sel[p] in idx_range(meta, p, meta[q][versions(meta, q)[sel[q] - 1]][p])
-                    for q in names)
-                if not needed:
-                    ok = False
-                    break
-        if ok:
-            sols.append(sel)
-    return sols
+        if _combo_ok(meta, sel, names, root):
+            solutions.append(sel)
+    return solutions
 
 
 def show(meta, sel):
-    return "\n".join(
-        f"{p} " + ("not installed" if sel[p] == 0 else versions(meta, p)[sel[p] - 1])
-        for p in meta)
+    """Печатает выбранный набор версий."""
+    lines = []
+    for name in meta:
+        if sel[name] == 0:
+            lines.append(f"{name} {NOT_INSTALLED}")
+        else:
+            ver = versions(meta, name)[sel[name] - 1]
+            lines.append(f"{name} {ver}")
+    return "\n".join(lines)
+
+
+def _pick_meta(argv):
+    """Выбирает набор данных по аргументу."""
+    if len(argv) > 1 and argv[1] == "t5":
+        return META_T5, ROOT_T5
+    return META_T6, ROOT_T6
+
+
+def main(argv):
+    """Точка входа скрипта."""
+    meta, root = _pick_meta(argv)
+    model = build_mzn(meta, root)
+    out = Path(__file__).with_name(
+        "task_7" + MZN_SUFFIX
+    )
+    out.write_text(model, encoding="utf-8")
+    print(f"--- model written to {out} ---")
+    print(model)
+    if shutil.which("minizinc"):
+        subprocess.run(
+            ["minizinc", "--solver", MZN_SOLVER, str(out)]
+        )
+    else:
+        print("--- minizinc not found, "
+              "solving by brute force ---")
+        solutions = brute(meta, root)
+        print(f"solutions: {len(solutions)}")
+        for sel in solutions:
+            print(show(meta, sel))
+            print(SEP)
+    return 0
 
 
 if __name__ == "__main__":
-    meta, root = (META_T5, ROOT_T5) if len(sys.argv) > 1 and sys.argv[1] == "t5" \
-        else (META_T6, ROOT_T6)
-    mzn = build_mzn(meta, root)
-    out = Path(__file__).with_name("task_7.mzn")
-    out.write_text(mzn)
-    print(f"--- model written to {out} ---")
-    print(mzn)
-    if shutil.which("minizinc"):
-        subprocess.run(["minizinc", "--solver", "Gecode", str(out)])
-    else:
-        print("--- minizinc not found, solving by brute force ---")
-        sols = brute(meta, root)
-        print(f"solutions: {len(sols)}")
-        for s in sols:
-            print(show(meta, s))
-            print("----------")
+    sys.exit(main(sys.argv))

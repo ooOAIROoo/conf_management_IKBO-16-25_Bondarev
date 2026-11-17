@@ -26,6 +26,8 @@ run() {
     fi
 }
 
+run "стиль кода (P2, Ф1, Ц1, К1, M1, P3)" \
+    "$PYTHON" "$ROOT/../pr_4/scripts/check_style.py" "$ROOT/.."
 run "юнит-тесты конфигурации" "$PYTHON" -m unittest discover -s "$ROOT/tests"
 run "параметры командной строки" bash "$SCRIPT_DIR/os/linux/check_cli.sh"
 

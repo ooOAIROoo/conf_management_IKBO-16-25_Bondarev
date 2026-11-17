@@ -16,6 +16,15 @@ set "PYTHONPATH=%ROOT%\src"
 set PASSED=0
 set FAILED=0
 
+"%PYTHON%" "%ROOT%\..\pr_4\scripts\check_style.py" "%ROOT%\.." >nul 2>&1
+if "%ERRORLEVEL%"=="0" (
+    echo [PASS] стиль кода
+    set /a PASSED+=1
+) else (
+    echo [FAIL] стиль кода
+    set /a FAILED+=1
+)
+
 "%PYTHON%" -m unittest discover -s "%ROOT%\tests" >nul 2>&1
 if "%ERRORLEVEL%"=="0" (
     echo [PASS] юнит-тесты конфигурации

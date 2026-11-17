@@ -48,12 +48,15 @@ run.bat --package guava            # Windows
 PYTHONPATH=pr_4/src python3 -m depviz --package guava
 ```
 
-Тесты:
+Тесты и проверки:
 
 ```bash
-./run.sh test       # Linux/macOS
-run.bat test        # Windows
+./run.sh test       # юнит-тесты (22 теста)
+./run.sh style      # стиль по критериям отчёта
+./run.sh check      # всё вместе
 ```
+
+То же для Windows: `run.bat test`, `run.bat style`, `run.bat check`.
 
 Полный прогон проверок: `pr_4/scripts/run_all.sh`.
 Подробности — в [pr_4/README.md](pr_4/README.md).
