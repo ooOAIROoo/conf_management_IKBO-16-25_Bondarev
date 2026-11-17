@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+myenv/
+venv/
+.venv/
+.vscode/
+.idea/
+*.zip
+*.exe
+
+# артефакты pr_4 (этап 1)
+pr_4/graph.png
+pr_4/*.egg-info/

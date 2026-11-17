@@ -35,11 +35,32 @@ cmake --build pr_3/build -j
 командной строки, при запуске печатаются в формате «ключ — значение»,
 для каждого параметра есть проверка ошибок.
 
-Запуск:
+Запуск (скрипты в корне репозитория, поддерживают Windows и Linux/macOS):
+
+```bash
+./run.sh --package guava           # Linux/macOS
+run.bat --package guava            # Windows
+```
+
+То же самое вручную:
 
 ```bash
 PYTHONPATH=pr_4/src python3 -m depviz --package guava
 ```
 
+Тесты:
+
+```bash
+./run.sh test       # Linux/macOS
+run.bat test        # Windows
+```
+
 Полный прогон проверок: `pr_4/scripts/run_all.sh`.
 Подробности — в [pr_4/README.md](pr_4/README.md).
+
+## Коды возврата pr_4
+
+| Код | Значение |
+|-----|----------|
+| `0` | Успех: параметры корректны и напечатаны |
+| `2` | Ошибка в параметрах командной строки |
