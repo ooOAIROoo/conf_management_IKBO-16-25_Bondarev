@@ -14,3 +14,6 @@ venv/
 # артефакты pr_4 (этап 1)
 pr_4/graph.png
 pr_4/*.egg-info/
+
+# сгенерированные модели pr_2
+pr_2/files/task_7.mzn

@@ -1,18 +1,20 @@
-"""Точка входа приложения (аналог src/main.cpp
-из pr_3).
+"""Точка входа приложения (этап 1).
 
-На этапе 1 main делает только три вещи:
+На этапе 1 main делает только три
+вещи:
+
 1. разбирает и проверяет параметры
-командной строки;
+   командной строки;
 2. печатает все параметры в формате
-«ключ — значение»;
+   «ключ — значение»;
 3. сообщает, что сбор графа — задача
-следующих этапов.
+   следующих этапов.
 
-Коды возврата (как в pr_3):
+Коды возврата:
+
 * 0 — успех, --help или --version;
 * 2 — ошибка разбора или проверки
-параметров командной строки.
+  параметров командной строки.
 """
 
 from __future__ import annotations
@@ -28,15 +30,36 @@ from .config import (
 )
 from .version import APP_VERSION, STAGE_DESCRIPTION
 
+ERROR_PREFIX = "depviz: "
+
+STAGE_LINES = (
+    "[stage1] конфигурация "
+    "проверена. Сбор графа "
+    "зависимостей (этапы 2–5) "
+    "ещё не реализован.",
+    "[stage1] в следующих этапах "
+    "здесь будут: загрузка POM "
+    "из репозитория, BFS-обход "
+    "с учётом транзитивности, "
+    "вывод ASCII-дерева и PNG "
+    "через Graphviz.",
+)
+
+
+def _print_error(error: str) -> None:
+    """Печатает ошибку и справку в stderr."""
+    print(ERROR_PREFIX + error, file=sys.stderr)
+    print(file=sys.stderr)
+    print(usage_text(), file=sys.stderr, end="")
+
 
 def main(argv: list[str] | None = None) -> int:
+    """Точка входа: разбор argv и вывод."""
     args = list(sys.argv[1:] if argv is None else argv)
 
     parsed = parse_command_line(args)
     if not parsed.ok():
-        print(f"depviz: {parsed.error}", file=sys.stderr)
-        print(file=sys.stderr)
-        print(usage_text(), file=sys.stderr, end="")
+        _print_error(parsed.error)
         return EXIT_CODE_ERROR
 
     config = parsed.config
@@ -45,24 +68,16 @@ def main(argv: list[str] | None = None) -> int:
         print(usage_text(), end="")
         return EXIT_CODE_SUCCESS
     if config.version:
-        print(f"depviz {APP_VERSION} ({STAGE_DESCRIPTION})")
+        print(
+            f"depviz {APP_VERSION} "
+            f"({STAGE_DESCRIPTION})"
+        )
         return EXIT_CODE_SUCCESS
 
-    # П. 3 задания этапа 1: вывести все
-    # параметры при запуске.
     print_config(config)
 
-    print(
-        "[stage1] конфигурация проверена. "
-        "Сбор графа зависимостей (этапы 2–5) "
-        "ещё не реализован."
-    )
-    print(
-        "[stage1] в следующих этапах здесь будут:"
-        " загрузка POM из репозитория,"
-        " BFS-обход с учётом транзитивности,"
-        " вывод ASCII-дерева и PNG через Graphviz."
-    )
+    for line in STAGE_LINES:
+        print(line)
     return EXIT_CODE_SUCCESS
 
 
