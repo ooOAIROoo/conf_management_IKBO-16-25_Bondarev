@@ -1,14 +1,11 @@
-#!/usr/bin/env bash
-# Запуск всех проверок этапа 1 pr_4 (аналог pr_3/scripts/run_all.sh в корне репозитория)
-set -euo pipefail
+#!/bin/sh
+# Запуск pr_4 (этап 1): "./run.sh test" — юнит-тесты, иначе — CLI depviz.
+# Скрипт работает из любого каталога: сначала переход в корень репозитория.
+set -e
+cd "$(dirname "$0")"
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PR4="${REPO_ROOT}/pr_4"
-
-echo "==> Запуск юнит-тестов pr_4..."
-PYTHONPATH="${PR4}/src" python3 -m unittest discover -s "${PR4}/tests" -v
-
-echo "==> Запуск проверки CLI pr_4..."
-bash "${PR4}/scripts/run_all.sh"
-
-echo "==> Все проверки пройдены."
+if [ "$1" = "test" ]; then
+    python3 -m unittest discover -s pr_4/tests -t .
+else
+    PYTHONPATH=pr_4/src python3 -m depviz "$@"
+fi

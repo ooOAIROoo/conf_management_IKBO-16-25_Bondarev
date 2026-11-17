@@ -83,7 +83,10 @@ class TestAllParameters(unittest.TestCase):
         self.assertEqual(cfg.filter_substring, "guava")
 
     def test_real_repo_flag_overrides_test_repo(self):
-        with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False) as tmp:
+        tmp_file = tempfile.NamedTemporaryFile(
+            "w", suffix=".txt", delete=False
+        )
+        with tmp_file as tmp:
             tmp.write("A\n")
             tmp_path = tmp.name
         result = parse_command_line(
