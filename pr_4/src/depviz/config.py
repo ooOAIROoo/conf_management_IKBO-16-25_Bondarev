@@ -1,16 +1,14 @@
-"""Параметры командной строки (этап 1).
+"""Параметры командной строки.
 
 Модуль отвечает за разбор argv,
 проверку значений и печать всех
 настроенных параметров в формате
 «ключ — значение».
 
-На этапе 1 это весь функционал
-приложения: граф зависимостей ещё не
-строится (этапы 2-5), но конфигурация
-уже полностью работает, включая
-обработку ошибок для каждого
-параметра.
+Параметры обслуживают все этапы:
+сбор данных (этап 2), обход графа
+(этап 3), обратные зависимости
+(этап 4) и визуализацию (этап 5).
 """
 
 from __future__ import annotations
@@ -33,6 +31,9 @@ ARGS_PER_VALUE_OPTION = 2
 ARGS_PER_FLAG_OPTION = 1
 
 MAX_FILTER_LENGTH = 200
+MAX_DEPTH_LIMIT = 100
+DEFAULT_MAX_DEPTH = MAX_DEPTH_LIMIT
+DOT_EXT = ".dot"
 
 DEFAULT_REPO = "https://repo.maven.apache.org/maven2"
 DEFAULT_PACKAGE_VERSION = "latest"
@@ -48,6 +49,7 @@ BAD_EDGE = (".", "-", ":")
 BAD_PAIR = ".."
 CURRENT_PARENTS = ("", ".")
 FILTER_ATTR = "filter_substring"
+DEPTH_ATTR = "max_depth"
 PREFIX = "[config] "
 ABS_REPO_LABEL = PREFIX + "  repo (абс. путь): "
 
@@ -138,9 +140,9 @@ MSG_OUTPUT_NUL = (
 )
 MSG_OUTPUT_EXT = (
     "имя выходного файла должно "
-    "оканчиваться на .png "
-    "(изображение графа "
-    "сохраняется в PNG)"
+    "оканчиваться на .png или .dot "
+    "(изображение графа или "
+    "исходник Graphviz)"
 )
 MSG_OUTPUT_IS_DIR = (
     "имя выходного файла является "
@@ -184,6 +186,23 @@ MSG_POSITIONAL = (
     "задаются опциями, см. --help)"
 )
 
+MSG_DEPTH_EMPTY = (
+    "глубина обхода не "
+    "должна быть пустой"
+)
+MSG_DEPTH_NOT_INT = (
+    "глубина обхода должна быть "
+    "целым числом"
+)
+MSG_DEPTH_NEGATIVE = (
+    "глубина обхода не может "
+    "быть отрицательной"
+)
+MSG_DEPTH_TOO_BIG = (
+    "глубина обхода слишком "
+    "велика (максимум {})"
+)
+
 _PACKAGE_RE = re.compile(r"^[A-Za-z0-9_.\-]+(?::[A-Za-z0-9_.\-]+)?$")
 _VERSION_RE = re.compile(r"^[A-Za-z0-9_.\-+]+$")
 
@@ -201,6 +220,8 @@ class Config:
     * output_file — имя выходного PNG-файла;
     * ascii_tree — вывод ASCII-деревом;
     * filter_substring — подстрока фильтра;
+    * max_depth — предельная глубина обхода;
+    * reverse — искать обратные зависимости;
     * help, version — служебные флаги.
     """
 
@@ -211,6 +232,8 @@ class Config:
     output_file: str = DEFAULT_OUTPUT_FILE
     ascii_tree: bool = False
     filter_substring: str = ""
+    max_depth: int = DEFAULT_MAX_DEPTH
+    reverse: bool = False
     help: bool = False
     version: bool = False
 
@@ -310,7 +333,8 @@ def _check_output_file(value: str) -> str:
         return _with_value(MSG_OUTPUT_SPACES, value)
     if NUL_CHAR in value:
         return _with_value(MSG_OUTPUT_NUL, value)
-    if not value.lower().endswith(PNG_EXT):
+    lower = value.lower()
+    if not lower.endswith(PNG_EXT) and not lower.endswith(DOT_EXT):
         return _with_value(MSG_OUTPUT_EXT, value)
     path = Path(value)
     if path.exists() and path.is_dir():
@@ -330,6 +354,23 @@ def _check_filter(value: str) -> str:
     return ""
 
 
+def _check_depth(value: int | str) -> str:
+    """Проверяет предельную глубину обхода."""
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return MSG_DEPTH_EMPTY
+        try:
+            value = int(text)
+        except ValueError:
+            return MSG_DEPTH_NOT_INT
+    if value < 0:
+        return MSG_DEPTH_NEGATIVE
+    if value > MAX_DEPTH_LIMIT:
+        return MSG_DEPTH_TOO_BIG.format(MAX_DEPTH_LIMIT)
+    return ""
+
+
 def validate_config(config: Config) -> str:
     """Проверяет разобранную конфигурацию."""
     if config.package is None:
@@ -340,6 +381,7 @@ def validate_config(config: Config) -> str:
         _check_version(config.package_version),
         _check_output_file(config.output_file),
         _check_filter(config.filter_substring),
+        _check_depth(config.max_depth),
     )
     for error in checks:
         if error:
@@ -358,6 +400,8 @@ _VALUE_OPTIONS = {
     "-o": "output_file",
     "--filter": "filter_substring",
     "-f": "filter_substring",
+    "--max-depth": "max_depth",
+    "-d": "max_depth",
 }
 
 _FLAG_OPTIONS = {
@@ -370,6 +414,8 @@ _FLAG_OPTIONS = {
     "-h": ("help", True),
     "--version": ("version", True),
     "-V": ("version", True),
+    "--reverse": ("reverse", True),
+    "--no-reverse": ("reverse", False),
 }
 
 
@@ -397,6 +443,11 @@ def _apply_value_option(args: list[str], index: int,
     value = args[next_index]
     if attr == FILTER_ATTR and value == "":
         return MSG_FILTER_EMPTY_ARG, ARGS_PER_VALUE_OPTION
+    if attr == DEPTH_ATTR:
+        error = _check_depth(value)
+        if error:
+            return error, ARGS_PER_VALUE_OPTION
+        value = int(value)
     setattr(config, attr, value)
     return "", ARGS_PER_VALUE_OPTION
 
@@ -494,6 +545,15 @@ _HELP_LINES = (
     "  -f, --filter <подстрока>   "
     "подстрока для фильтрации "
     "пакетов",
+    "  -d, --max-depth <число>    "
+    "предельная глубина обхода "
+    "(по умолчанию: 100)",
+    "      --reverse              "
+    "искать обратные зависимости: "
+    "кто зависит от пакета",
+    "      --no-reverse           "
+    "прямые зависимости "
+    "(по умолчанию)",
     "  -h, --help                 "
     "эта справка",
     "  -V, --version              "
@@ -521,12 +581,9 @@ def _quoted(value: str) -> str:
     return f'"{value}"'
 
 
-def format_config(config: Config) -> str:
-    """Все параметры в формате
-    «ключ — значение»."""
-    lines = [PREFIX + "параметры запуска:"]
-    lines.append(f"{PREFIX}  package: {_quoted(config.package or '')}")
-    lines.append(f"{PREFIX}  repo: {_quoted(config.repo)}")
+def _repo_lines(config: Config) -> list:
+    """Строки про репозиторий и режим работы."""
+    lines = [f"{PREFIX}  repo: {_quoted(config.repo)}"]
     if config.test_repo_mode:
         lines.append(
             f"{PREFIX}  test_repo_mode: true "
@@ -542,23 +599,44 @@ def format_config(config: Config) -> str:
             f"{PREFIX}  test_repo_mode: false "
             "(реальный репозиторий)"
         )
-    lines.append(
+    return lines
+
+
+def _flag(value: bool) -> str:
+    """Превращает флаг в true/false."""
+    return "true" if value else "false"
+
+
+def _mode_lines(config: Config) -> list:
+    """Строки про версию и режимы."""
+    return [
         f"{PREFIX}  package_version: "
-        f"{_quoted(config.package_version)}"
-    )
-    lines.append(
+        f"{_quoted(config.package_version)}",
         f"{PREFIX}  output_file: "
-        f"{_quoted(config.output_file)}"
-    )
-    tree_flag = "true" if config.ascii_tree else "false"
-    lines.append(f"{PREFIX}  ascii_tree: {tree_flag}")
+        f"{_quoted(config.output_file)}",
+        f"{PREFIX}  ascii_tree: {_flag(config.ascii_tree)}",
+        f"{PREFIX}  max_depth: {config.max_depth}",
+        f"{PREFIX}  reverse: {_flag(config.reverse)}",
+    ]
+
+
+def _filter_line(config: Config) -> str:
+    """Строка про подстроку фильтра."""
     if config.filter_substring:
-        lines.append(
-            f"{PREFIX}  filter: "
-            f"{_quoted(config.filter_substring)}"
-        )
-    else:
-        lines.append(f'{PREFIX}  filter: "" (не задана)')
+        value = _quoted(config.filter_substring)
+        return f"{PREFIX}  filter: {value}"
+    return f'{PREFIX}  filter: "" (не задана)'
+
+
+def format_config(config: Config) -> str:
+    """Все параметры в формате
+    «ключ — значение»."""
+    lines = [PREFIX + "параметры запуска:"]
+    package = _quoted(config.package or "")
+    lines.append(f"{PREFIX}  package: {package}")
+    lines.extend(_repo_lines(config))
+    lines.extend(_mode_lines(config))
+    lines.append(_filter_line(config))
     lines.append(f"{PREFIX}  app_version: {APP_VERSION}")
     return NEWLINE.join(lines) + NEWLINE
 
