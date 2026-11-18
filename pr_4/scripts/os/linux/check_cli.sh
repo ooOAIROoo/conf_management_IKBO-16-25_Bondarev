@@ -57,16 +57,18 @@ expect_code "-h" 0 run_depviz -h
 expect_code "--version" 0 run_depviz --version
 expect_code "-V" 0 run_depviz -V
 
-section "Минимальный запуск (только обязательный --package)"
-expect_code "--package guava" 0 run_depviz --package guava
-expect_code "-p guava" 0 run_depviz -p guava
-expect_code "--package=guava" 0 run_depviz --package=guava
-expect_code "groupId:artifactId" 0 run_depviz --package com.google.guava:guava
+section "Минимальный запуск (проверка параметров без сети)"
+expect_code "--help" 0 run_depviz --package guava --help
+expect_code "-p guava --help" 0 run_depviz -p guava --help
+expect_code "--package=guava --help" 0 run_depviz --package=guava --help
+expect_code "groupId:artifactId --help" 0 run_depviz \
+    --package com.google.guava:guava --help
 
-section "Все параметры вместе (реальный репозиторий)"
+section "Все параметры вместе (тестовый репозиторий)"
 expect_code "все параметры" 0 run_depviz \
-    --package com.google.guava:guava \
-    --repo https://repo.maven.apache.org/maven2 \
+    --package A \
+    --repo "$SAMPLE" \
+    --test-repo \
     --package-version 32.1.2 \
     --output graph.png \
     --ascii-tree \
@@ -106,6 +108,34 @@ section "Обработка ошибок: --output"
 expect_code "не .png" 2 run_depviz --package guava --output graph.jpg
 expect_code "родительский каталог не существует" 2 run_depviz \
     --package guava --output "$TMP_DIR/нет-каталога/graph.png"
+
+
+section "Этапы 2-5: обход графа и вывод"
+expect_code "прямой обход (ASCII-дерево)" 0 run_depviz \
+    --package A --repo "$SAMPLE" --test-repo --ascii-tree \
+    --output "$TMP_DIR/tree.png"
+expect_code "обратные зависимости (--reverse)" 0 run_depviz \
+    --package F --repo "$SAMPLE" --test-repo --reverse \
+    --ascii-tree --output "$TMP_DIR/rev.png"
+expect_code "предельная глубина (--max-depth)" 0 run_depviz \
+    --package A --repo "$SAMPLE" --test-repo --max-depth 1 \
+    --output "$TMP_DIR/depth.png"
+expect_code "фильтр по подстроке" 0 run_depviz \
+    --package A --repo "$SAMPLE" --test-repo --filter D \
+    --output "$TMP_DIR/filter.png"
+expect_code "исходник Graphviz (.dot)" 0 run_depviz \
+    --package A --repo "$SAMPLE" --test-repo --output "$TMP_DIR/g.dot"
+expect_code "короткая форма -d" 0 run_depviz \
+    --package A --repo "$SAMPLE" --test-repo -d 2 \
+    --output "$TMP_DIR/short.png"
+
+section "Ошибки этапов 3-4"
+expect_code "глубина не число" 2 run_depviz \
+    --package A --repo "$SAMPLE" --test-repo --max-depth abc
+expect_code "отрицательная глубина" 2 run_depviz \
+    --package A --repo "$SAMPLE" --test-repo --max-depth -1
+expect_code "слишком большая глубина" 2 run_depviz \
+    --package A --repo "$SAMPLE" --test-repo --max-depth 1000
 
 section "Обработка ошибок: --filter"
 expect_code "пустой фильтр" 2 run_depviz --package guava --filter ""
